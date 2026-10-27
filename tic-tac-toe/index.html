@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scare Games Tic-Tac-Toe</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --panel: #ffffff;
+    --ink: #1f2430;
+    --muted: #5f6675;
+    --line: #d9d3c4;
+    --accent: #1d4f91;
+    --mike: #5fb83a;
+    --sulley: #3fa7d6;
+    --win: #f2c14e;
+    --shadow: 0 8px 24px rgba(31, 36, 48, 0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151821;
+      --panel: #1f2430;
+      --ink: #eef0f4;
+      --muted: #a3a9b6;
+      --line: #343b4b;
+      --accent: #7fb0ff;
+      --win: #8a6d1f;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151821;
+    --panel: #1f2430;
+    --ink: #eef0f4;
+    --muted: #a3a9b6;
+    --line: #343b4b;
+    --accent: #7fb0ff;
+    --win: #8a6d1f;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 40px;
+  }
+  main { width: 100%; max-width: 440px; }
+
+  header { text-align: center; margin-bottom: 20px; }
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  h1 { font-size: 28px; margin: 0; line-height: 1.15; }
+
+  .mode {
+    display: flex;
+    gap: 6px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px;
+    margin: 0 auto 18px;
+    width: fit-content;
+  }
+  .mode button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .mode button[aria-pressed="true"] { background: var(--accent); color: var(--panel); }
+
+  .cpu-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    justify-content: center;
+    margin: -6px 0 18px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .cpu-options[hidden] { display: none; }
+  .cpu-options .mode { margin: 0; }
+  .cpu-options .mode button { font-size: 13px; padding: 6px 12px; }
+  .cpu-options .opt { display: flex; align-items: center; gap: 8px; }
+
+  .scores {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 8px 10px;
+    transition: border-color 0.2s;
+  }
+  .player.right { flex-direction: row-reverse; text-align: right; }
+  .player.active.mike { border-color: var(--mike); }
+  .player.active.sulley { border-color: var(--sulley); }
+  .player svg { width: 40px; height: 40px; flex: none; }
+  .player .name { font-weight: 700; font-size: 14px; }
+  .player .score { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .draws { text-align: center; color: var(--muted); font-size: 12px; }
+  .draws strong { display: block; font-size: 18px; color: var(--ink); }
+
+  .status {
+    text-align: center;
+    font-weight: 600;
+    min-height: 1.5em;
+    margin: 0 0 14px;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    background: var(--line);
+    padding: 10px;
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+  }
+  .cell {
+    aspect-ratio: 1;
+    border: 0;
+    border-radius: 12px;
+    background: var(--panel);
+    cursor: pointer;
+    padding: 12%;
+    display: grid;
+    place-items: center;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .cell:hover:not(:disabled) { transform: scale(0.97); }
+  .cell:disabled { cursor: default; }
+  .cell.win { background: var(--win); }
+  .cell svg { width: 100%; height: 100%; animation: pop 0.25s ease-out; }
+  @keyframes pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+  .actions button {
+    font: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .actions button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Monsters University · Scare Games</p>
+    <h1>Mike vs. Sulley</h1>
+  </header>
+
+  <div class="mode" role="group" aria-label="Game mode">
+    <button type="button" data-mode="pvp" aria-pressed="true">2 players</button>
+    <button type="button" data-mode="cpu" aria-pressed="false">vs. computer</button>
+  </div>
+
+  <div class="cpu-options" id="cpu-options" hidden>
+    <span class="opt">You play
+      <span class="mode" role="group" aria-label="Your character">
+        <button type="button" data-side="M" aria-pressed="true">Mike</button>
+        <button type="button" data-side="S" aria-pressed="false">Sulley</button>
+      </span>
+    </span>
+    <span class="opt">Difficulty
+      <span class="mode" role="group" aria-label="Difficulty">
+        <button type="button" data-level="easy" aria-pressed="false">Easy</button>
+        <button type="button" data-level="medium" aria-pressed="true">Medium</button>
+        <button type="button" data-level="hard" aria-pressed="false">Hard</button>
+      </span>
+    </span>
+  </div>
+
+  <div class="scores">
+    <div class="player mike" id="p-M">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#mike"/></svg>
+      <div><div class="name" id="name-M">Mike</div><div class="score" id="score-M">0</div></div>
+    </div>
+    <div class="draws">Draws<strong id="score-draw">0</strong></div>
+    <div class="player sulley right" id="p-S">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#sulley"/></svg>
+      <div><div class="name" id="name-S">Sulley</div><div class="score" id="score-S">0</div></div>
+    </div>
+  </div>
+
+  <p class="status" id="status" aria-live="polite"></p>
+
+  <div class="board" id="board" role="grid" aria-label="Tic-tac-toe board"></div>
+
+  <div class="actions">
+    <button type="button" class="primary" id="new-round">New round</button>
+    <button type="button" id="reset">Reset scores</button>
+  </div>
+</main>
+
+<!-- Character marks, drawn as simple SVG -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="mike" viewBox="0 0 100 100">
+      <path d="M30 20 L24 4 L38 16 Z" fill="#d8d2c0"/>
+      <path d="M70 20 L76 4 L62 16 Z" fill="#d8d2c0"/>
+      <circle cx="50" cy="54" r="42" fill="#5fb83a"/>
+      <circle cx="50" cy="46" r="22" fill="#fff"/>
+      <circle cx="50" cy="46" r="12" fill="#3f9fd8"/>
+      <circle cx="50" cy="46" r="6" fill="#111"/>
+      <circle cx="46" cy="42" r="2.5" fill="#fff"/>
+      <path d="M32 74 Q50 88 68 74" stroke="#1f3a12" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="sulley" viewBox="0 0 100 100">
+      <path d="M26 26 Q14 10 22 2 Q28 16 36 20 Z" fill="#e8e0c8"/>
+      <path d="M74 26 Q86 10 78 2 Q72 16 64 20 Z" fill="#e8e0c8"/>
+      <circle cx="50" cy="54" r="42" fill="#3fa7d6"/>
+      <circle cx="28" cy="34" r="7" fill="#7b4fa0"/>
+      <circle cx="76" cy="40" r="6" fill="#7b4fa0"/>
+      <circle cx="22" cy="64" r="5" fill="#7b4fa0"/>
+      <circle cx="80" cy="68" r="7" fill="#7b4fa0"/>
+      <circle cx="40" cy="46" r="7" fill="#fff"/>
+      <circle cx="60" cy="46" r="7" fill="#fff"/>
+      <circle cx="41" cy="47" r="3.5" fill="#111"/>
+      <circle cx="59" cy="47" r="3.5" fill="#111"/>
+      <path d="M34 66 Q50 82 66 66 Z" fill="#1b1b1b"/>
+      <path d="M40 67 L43 72 L46 68 M54 68 L57 72 L60 67" fill="#fff"/>
+    </symbol>
+  </defs>
+</svg>
+
+<script>
+  const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const NAMES = { M: "Mike", S: "Sulley" };
+
+  const boardEl = document.getElementById("board");
+  const statusEl = document.getElementById("status");
+  const scores = { M: 0, S: 0, draw: 0 };
+  // Chance the computer makes a random move instead of the best one.
+  const MISTAKE_RATE = { easy: 0.6, medium: 0.25, hard: 0 };
+  let board, turn, over, mode = "pvp", starter = "M";
+  let cpu = "S", level = "medium";
+  const other = m => (m === "M" ? "S" : "M");
+
+  const cells = Array.from({ length: 9 }, (_, i) => {
+    const b = document.createElement("button");
+    b.className = "cell";
+    b.type = "button";
+    b.setAttribute("aria-label", `Square ${i + 1}, empty`);
+    b.addEventListener("click", () => play(i));
+    boardEl.appendChild(b);
+    return b;
+  });
+
+  function winner(b) {
+    for (const line of LINES) {
+      const [a, c, d] = line;
+      if (b[a] && b[a] === b[c] && b[a] === b[d]) return { mark: b[a], line };
+    }
+    return b.every(Boolean) ? { mark: "draw" } : null;
+  }
+
+  function newRound() {
+    board = Array(9).fill(null);
+    over = false;
+    turn = starter;
+    starter = starter === "M" ? "S" : "M"; // alternate who goes first
+    cells.forEach((c, i) => {
+      c.innerHTML = "";
+      c.disabled = false;
+      c.classList.remove("win");
+      c.setAttribute("aria-label", `Square ${i + 1}, empty`);
+    });
+    render();
+    maybeCpu();
+  }
+
+  function play(i) {
+    if (over || board[i] || (mode === "cpu" && turn === cpu)) return;
+    place(i);
+  }
+
+  function place(i) {
+    board[i] = turn;
+    const cell = cells[i];
+    cell.innerHTML = `<svg viewBox="0 0 100 100"><use href="#${turn === "M" ? "mike" : "sulley"}"/></svg>`;
+    cell.disabled = true;
+    cell.setAttribute("aria-label", `Square ${i + 1}, ${NAMES[turn]}`);
+
+    const result = winner(board);
+    if (result) {
+      over = true;
+      scores[result.mark]++;
+      if (result.line) result.line.forEach(j => cells[j].classList.add("win"));
+      cells.forEach(c => (c.disabled = true));
+    } else {
+      turn = turn === "M" ? "S" : "M";
+    }
+    render(result);
+    maybeCpu();
+  }
+
+  function render(result) {
+    document.getElementById("score-M").textContent = scores.M;
+    document.getElementById("score-S").textContent = scores.S;
+    document.getElementById("score-draw").textContent = scores.draw;
+    for (const m of ["M", "S"]) {
+      const tag = mode !== "cpu" ? "" : m === cpu ? " (CPU)" : " (You)";
+      document.getElementById(`name-${m}`).textContent = NAMES[m] + tag;
+    }
+    document.getElementById("p-M").classList.toggle("active", !over && turn === "M");
+    document.getElementById("p-S").classList.toggle("active", !over && turn === "S");
+
+    if (result?.mark === "draw") statusEl.textContent = "It's a draw. Nobody gets the scream can.";
+    else if (result && mode === "cpu") statusEl.textContent = result.mark === cpu ? `${NAMES[cpu]} wins. Back to the library!` : "You win the round!";
+    else if (result) statusEl.textContent = `${NAMES[result.mark]} wins the round!`;
+    else if (mode === "cpu") statusEl.textContent = turn === cpu ? `${NAMES[cpu]} is thinking…` : "Your turn";
+    else statusEl.textContent = `${NAMES[turn]}'s turn`;
+  }
+
+  // Computer move: minimax, with random moves mixed in based on difficulty.
+  function maybeCpu() {
+    if (mode !== "cpu" || over || turn !== cpu) return;
+    setTimeout(() => {
+      const open = board.map((v, i) => (v ? null : i)).filter(i => i !== null);
+      const move = Math.random() < MISTAKE_RATE[level]
+        ? open[Math.floor(Math.random() * open.length)]
+        : bestMove();
+      place(move);
+    }, 450);
+  }
+
+  function bestMove() {
+    let best = -Infinity, move = null;
+    board.forEach((v, i) => {
+      if (v) return;
+      board[i] = cpu;
+      const s = minimax(false, 0);
+      board[i] = null;
+      if (s > best) { best = s; move = i; }
+    });
+    return move;
+  }
+
+  function minimax(cpuTurn, depth) {
+    const r = winner(board);
+    if (r) return r.mark === cpu ? 10 - depth : r.mark === other(cpu) ? depth - 10 : 0;
+    let best = cpuTurn ? -Infinity : Infinity;
+    board.forEach((v, i) => {
+      if (v) return;
+      board[i] = cpuTurn ? cpu : other(cpu);
+      const s = minimax(!cpuTurn, depth + 1);
+      board[i] = null;
+      best = cpuTurn ? Math.max(best, s) : Math.min(best, s);
+    });
+    return best;
+  }
+
+  function resetGame() {
+    scores.M = scores.S = scores.draw = 0;
+    starter = "M";
+    newRound();
+  }
+
+  // Wire a segmented button group: mark the clicked button pressed, then run onPick.
+  function segmented(selector, onPick) {
+    const buttons = document.querySelectorAll(selector);
+    buttons.forEach(btn => btn.addEventListener("click", () => {
+      buttons.forEach(b => b.setAttribute("aria-pressed", b === btn));
+      onPick(btn.dataset);
+      resetGame();
+    }));
+  }
+
+  segmented("[data-mode]", d => {
+    mode = d.mode;
+    document.getElementById("cpu-options").hidden = mode !== "cpu";
+  });
+  segmented("[data-side]", d => { cpu = other(d.side); });
+  segmented("[data-level]", d => { level = d.level; });
+
+  document.getElementById("new-round").addEventListener("click", newRound);
+  document.getElementById("reset").addEventListener("click", resetGame);
+
+  newRound();
+</script>
+</body>
+</html>
